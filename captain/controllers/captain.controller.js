@@ -4,7 +4,9 @@ const jwt = require('jsonwebtoken')
 // const { model } = require('mongoose')
 const blackListTokenSchema=require('../models/blacklisttoken.model.js');
 const blacklisttokenModel = require('../models/blacklisttoken.model.js');
+const {subscribeToQueue} = require('../service/rabbit.js');
 
+const pendingRequests=[]
 
 module.exports.register = async(req, res)=>{
     try{
@@ -63,7 +65,7 @@ module.exports.logout=async(req, res)=>{
         await blacklisttokenModel.create({token})
         res.clearCookie('token')
         res.send({message:'Captain logged out successfully.'})
-    }catch{
+    }catch(error){
         res.status(500).json({message: error.message})
     }
 }
@@ -87,3 +89,28 @@ module.exports.toggleAvailability = async(req, res)=>{
         res.status(500).json({message: error.message})
     }
 }
+
+// long polling
+module.exports.waitForNewRide=async(req, res)=>{
+    // set timeout for long polling - 30 seconds
+    req.setTimeout(30000,()=>{
+        res.status(204).end(); //no content
+    })
+
+
+    // add the response object to the pendingRequests array
+    pendingRequests.push(res);
+}
+
+subscribeToQueue("new-ride",(data)=>{
+    const rideData = JSON.parse(data);
+
+    // send new ride data to all pending requests
+    pendingRequests.forEach(res=>{
+        res.json({data: rideData})
+    })
+
+    // clear the pending requests
+    pendingRequests.length=0;
+    // console.log(JSON.parse(data))
+})

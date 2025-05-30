@@ -10,5 +10,5 @@ router.get('/logout', captainController.logout);
 router.get('/profile',authMiddleware.captainAuth, captainController.profile);
 // profile can only be accessed by logged-in captain.
 router.patch('/toggle-availability',authMiddleware.captainAuth,captainController.toggleAvailability)
-
+router.get('/new-ride', authMiddleware.captainAuth, captainController.waitForNewRide)
 module.exports=router

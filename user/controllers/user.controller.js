@@ -4,7 +4,9 @@ const jwt = require('jsonwebtoken')
 // const { model } = require('mongoose')
 const blackListTokenSchema=require('../models/blacklisttoken.model.js');
 const blacklisttokenModel = require('../models/blacklisttoken.model.js');
-
+const EventEmitter = require('events');
+const rideEventEmitter = new EventEmitter();
+const {subscribeToQueue} = require('../service/rabbit.js')
 
 module.exports.register = async(req, res)=>{
     try{
@@ -75,3 +77,20 @@ module.exports.profile=async(req, res)=>{
         res.status(500).json({message: error.message})
     }
 }
+
+module.exports.acceptedRide=async(req, res)=>{
+    // using long polling - as the ride gets accepted then send the response
+    rideEventEmitter.once('ride-accepted', (data)=>{
+        res.send(data)
+    })
+
+    // set timeout for long polling
+    setTimeout(()=>{
+        res.status(204).send();
+    },30000)
+}
+
+subscribeToQueue('ride-accepted', async(msg)=>{
+    const data = JSON.parse(msg)
+    rideEventEmitter.emit('ride-accepted',data)
+})

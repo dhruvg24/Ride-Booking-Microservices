@@ -25,7 +25,7 @@ module.exports.userAuth=async(req, res,next)=>{
         }
         req.user=user
         next()
-    }catch{
+    }catch(error){
         res.status(500).json({message: error.message})
     }
 }
